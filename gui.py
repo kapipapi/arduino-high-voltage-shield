@@ -39,11 +39,9 @@ BAUDRATE = 9600
 TIMEOUT_SEC = 1
 
 
-def valid_speed_number(P):
+def valid_number(P):
     if str.isdigit(P) or P == "":
-        if MIN_SPEED_HZ <= P <= MAX_SPEED_HZ:
-            return True
-        return False
+        return True
     else:
         return False
 
@@ -69,59 +67,65 @@ class Toplevel1:
         top.geometry("600x180+642+319")
         top.minsize(330, 180)
         top.maxsize(1905, 1050)
-        top.resizable(1, 1)
+        top.resizable(0, 0)
         top.title("Motor steering")
 
-        self.Message = tk.StringVar(top)
-        self.Message.set("MESSAGE")
+        self.LogMessage = tk.StringVar(top)
+        self.LogMessage.set("MESSAGE")
 
-        self.Label1 = tk.Label(top)
-        self.Label1.place(relx=0.017, rely=0.056, height=31, width=139)
-        self.Label1.configure(text='''Select port:''')
+        self.LabelPort = tk.Label(top)
+        self.LabelPort.place(relx=0.017, rely=0.056, height=31, width=139)
+        self.LabelPort.configure(text='''Select port:''')
 
         self.devices = [port.device for port in serial.tools.list_ports.comports()]
 
-        self.TCombobox1 = ttk.Combobox(top)
-        self.TCombobox1.place(relx=0.25, rely=0.056, relheight=0.172, relwidth=0.728)
-        self.TCombobox1.configure(cursor="fleur")
+        self.ComboboxPorts = ttk.Combobox(top)
+        self.ComboboxPorts.place(relx=0.25, rely=0.056, relheight=0.172, relwidth=0.728)
+        self.ComboboxPorts.configure(cursor="fleur")
         if len(self.devices) > 0:
-            self.TCombobox1.set(self.devices[0])
-        self.TCombobox1['values'] = self.devices
-        self.TCombobox1['state'] = 'readonly'
+            self.ComboboxPorts.set(self.devices[0])
+        self.ComboboxPorts['values'] = self.devices
+        self.ComboboxPorts['state'] = 'readonly'
 
-        self.Label1_1 = tk.Label(top)
-        self.Label1_1.place(relx=0.017, rely=0.278, height=31, width=139)
-        self.Label1_1.configure(activebackground="#f9f9f9")
-        self.Label1_1.configure(text='''Speed: [Hz]''')
+        self.LabelSpeed = tk.Label(top)
+        self.LabelSpeed.place(relx=0.017, rely=0.278, height=31, width=139)
+        self.LabelSpeed.configure(activebackground="#f9f9f9")
+        self.LabelSpeed.configure(text='''Speed: [Hz]''')
 
-        vcmd = (top.register(valid_speed_number))
-        self.Entry1 = tk.Entry(top, validate='all', validatecommand=(vcmd, '%P'))
-        self.Entry1.place(relx=0.25, rely=0.278, height=33, relwidth=0.543)
-        self.Entry1.configure(background="white")
-        self.Entry1.configure(cursor="fleur")
-        self.Entry1.configure(font="TkFixedFont")
+        vcmd = (top.register(valid_number))
+        self.EntrySpeed = tk.Entry(top, validate='all', validatecommand=(vcmd, '%P'))
+        self.EntrySpeed.place(relx=0.25, rely=0.278, height=33, relwidth=0.356)
+        self.EntrySpeed.configure(background="white")
+        self.EntrySpeed.configure(cursor="fleur")
+        self.EntrySpeed.configure(font="TkFixedFont")
 
-        self.Button1 = tk.Button(top, command=self.send_message)
-        self.Button1.place(relx=0.8, rely=0.278, height=33, width=105)
-        self.Button1.configure(borderwidth="2")
-        self.Button1.configure(cursor="fleur")
-        self.Button1.configure(text='''Set''')
+        self.ButtonSpeedSet = tk.Button(top, command=self.set_speed)
+        self.ButtonSpeedSet.place(relx=0.618, rely=0.278, height=33, width=105)
+        self.ButtonSpeedSet.configure(borderwidth="2")
+        self.ButtonSpeedSet.configure(cursor="fleur")
+        self.ButtonSpeedSet.configure(text='''Set''')
 
-        self.Label1_1_1 = tk.Label(top)
-        self.Label1_1_1.place(relx=0.017, rely=0.5, height=31, width=139)
-        self.Label1_1_1.configure(activebackground="#f9f9f9")
-        self.Label1_1_1.configure(text='''Direction:''')
+        self.ButtonSpeedStop = tk.Button(top, command=self.stop_motor)
+        self.ButtonSpeedStop.place(relx=0.801, rely=0.278, height=31, width=105)
+        self.ButtonSpeedStop.configure(activebackground="#f9f9f9")
+        self.ButtonSpeedStop.configure(borderwidth="2")
+        self.ButtonSpeedStop.configure(text='''STOP''')
 
-        self.Button1_1 = tk.Button(top)
-        self.Button1_1.place(relx=0.8, rely=0.5, height=33, width=105)
-        self.Button1_1.configure(activebackground="#f9f9f9")
-        self.Button1_1.configure(borderwidth="2")
-        self.Button1_1.configure(text='''Set''')
+        self.LabelDirection = tk.Label(top)
+        self.LabelDirection.place(relx=0.017, rely=0.5, height=31, width=139)
+        self.LabelDirection.configure(activebackground="#f9f9f9")
+        self.LabelDirection.configure(text='''Direction:''')
 
-        self.TCombobox2 = ttk.Combobox(top)
-        self.TCombobox2.place(relx=0.25, rely=0.5, relheight=0.172, relwidth=0.545)
-        self.TCombobox2.set('CLOCKWISE')
-        self.TCombobox2['values'] = ('CLOCKWISE', 'COUNTERCLOCKWISE')
+        self.ComboboxDirection = ttk.Combobox(top)
+        self.ComboboxDirection.place(relx=0.25, rely=0.5, relheight=0.172, relwidth=0.545)
+        self.ComboboxDirection.set('CLOCKWISE')
+        self.ComboboxDirection['values'] = ('CLOCKWISE', 'COUNTERCLOCKWISE')
+
+        self.ButtonDirectionSet = tk.Button(top)
+        self.ButtonDirectionSet.place(relx=0.8, rely=0.5, height=33, width=105)
+        self.ButtonDirectionSet.configure(activebackground="#f9f9f9")
+        self.ButtonDirectionSet.configure(borderwidth="2")
+        self.ButtonDirectionSet.configure(text='''Set''')
 
         self.Label2 = tk.Label(top)
         self.Label2.place(relx=0.017, rely=0.722, height=41, width=579)
@@ -130,13 +134,30 @@ class Toplevel1:
         self.Label2.configure(borderwidth="2")
         self.Label2.configure(cursor="fleur")
         self.Label2.configure(justify='left')
-        self.Label2.configure(textvariable=self.Message)
+        self.Label2.configure(textvariable=self.LogMessage)
 
-    def send_message(self):
-        ser = serial.Serial(self.TCombobox1.get(), baudrate=BAUDRATE, timeout=TIMEOUT_SEC)
-        self.Message.set(ser.name + " speed: " + self.Entry1.get())
-        ser.write(bytes(f"speed:{self.Entry1.get()}\r", encoding='utf8'))
+    def send_message(self, data: str):
+        ser = serial.Serial(self.ComboboxPorts.get(), baudrate=BAUDRATE, timeout=TIMEOUT_SEC)
+        self.LogMessage.set(ser.name + " data: " + data)
+        ser.write(bytes(f"{data}\r\n", encoding='utf8'))
         ser.close()
+
+    def set_speed(self):
+        speed_entry = self.EntrySpeed.get()
+        if speed_entry != "":
+            speed = int(speed_entry)
+            if MIN_SPEED_HZ <= speed <= MAX_SPEED_HZ:
+                self.send_message(f"speed:{self.EntrySpeed.get()}")
+
+    def stop_motor(self):
+        self.send_message("stop")
+
+    def change_direction(self):
+        direction = self.ComboboxDirection.get()
+        if direction == "CLOCKWISE":
+            self.send_message("dir:CW")
+        else:
+            self.send_message("dir:CCW")
 
 
 if __name__ == '__main__':
