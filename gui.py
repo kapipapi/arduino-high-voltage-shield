@@ -6,12 +6,18 @@
 #    Oct 14, 2021 03:47:19 PM CEST  platform: Linux
 
 import sys
+import threading
+import time
+
+import serial
 import serial.tools.list_ports
 
 try:
     import Tkinter as tk
+    import Tkinter.scrolledtext as tks
 except ImportError:
     import tkinter as tk
+    import tkinter.scrolledtext as tks
 
 try:
     import ttk
@@ -70,22 +76,29 @@ class Toplevel1:
         top.resizable(0, 0)
         top.title("Motor steering")
 
-        self.LogMessage = tk.StringVar(top)
-        self.LogMessage.set("MESSAGE")
+        self.serial = serial.Serial()
+
+        self.devices = []
 
         self.LabelPort = tk.Label(top)
         self.LabelPort.place(relx=0.017, rely=0.056, height=31, width=139)
         self.LabelPort.configure(text='''Select port:''')
 
-        self.devices = [port.device for port in serial.tools.list_ports.comports()]
-
         self.ComboboxPorts = ttk.Combobox(top)
-        self.ComboboxPorts.place(relx=0.25, rely=0.056, relheight=0.172, relwidth=0.728)
+        self.ComboboxPorts.place(relx=0.25, rely=0.056, relheight=0.172, relwidth=0.601)
         self.ComboboxPorts.configure(cursor="fleur")
-        if len(self.devices) > 0:
-            self.ComboboxPorts.set(self.devices[0])
-        self.ComboboxPorts['values'] = self.devices
         self.ComboboxPorts['state'] = 'readonly'
+        self.scan_ports()
+
+        self.Button21 = tk.Button(top, command=self.connect_to_port)
+        self.Button21.place(relx=0.857, rely=0.056, height=33, width=33)
+        self.Button21.configure(borderwidth="2")
+        self.Button21.configure(text='▶')
+
+        self.Button2 = tk.Button(top, command=self.scan_ports)
+        self.Button2.place(relx=0.917, rely=0.056, height=33, width=33)
+        self.Button2.configure(borderwidth="2")
+        self.Button2.configure(text='↺')
 
         self.LabelSpeed = tk.Label(top)
         self.LabelSpeed.place(relx=0.017, rely=0.278, height=31, width=139)
@@ -121,26 +134,60 @@ class Toplevel1:
         self.ComboboxDirection.set('CLOCKWISE')
         self.ComboboxDirection['values'] = ('CLOCKWISE', 'COUNTERCLOCKWISE')
 
-        self.ButtonDirectionSet = tk.Button(top)
+        self.ButtonDirectionSet = tk.Button(top, command=self.change_direction)
         self.ButtonDirectionSet.place(relx=0.8, rely=0.5, height=33, width=105)
         self.ButtonDirectionSet.configure(activebackground="#f9f9f9")
         self.ButtonDirectionSet.configure(borderwidth="2")
         self.ButtonDirectionSet.configure(text='''Set''')
 
-        self.Label2 = tk.Label(top)
+        self.Label2 = tks.ScrolledText(top)
         self.Label2.place(relx=0.017, rely=0.722, height=41, width=579)
-        self.Label2.configure(anchor='nw')
-        self.Label2.configure(background="#ffffff")
-        self.Label2.configure(borderwidth="2")
-        self.Label2.configure(cursor="fleur")
-        self.Label2.configure(justify='left')
-        self.Label2.configure(textvariable=self.LogMessage)
+        self.Label2.insert(tk.INSERT, "SELECT SERIAL PORT AND SEND ACTION")
+        self.Label2.see(tk.END)
+
+    def connect_to_port(self):
+        if self.serial.isOpen():
+            self.serial.close()
+            self.log("connected")
+            self.Button21.configure(text='▶')
+        else:
+            self.serial = serial.Serial(self.ComboboxPorts.get(), baudrate=BAUDRATE, timeout=TIMEOUT_SEC)
+            threading.Thread(target=self.read_serial).start()
+            self.log("disconnected")
+            self.Button21.configure(text='D')
+
+    def read_serial(self):
+        while True:
+            time.sleep(0.1)
+            if self.serial.isOpen():
+                line = self.serial.readline().decode('ascii').strip("\r\n")
+                if line != "":
+                    self.log(self.serial.name + " rcv: " + line)
+            else:
+                break
+
+    def scan_ports(self):
+        self.devices = [port.device for port in serial.tools.list_ports.comports()]
+        if len(self.devices) > 0:
+            self.ComboboxPorts.set(self.devices[0])
+        self.ComboboxPorts['values'] = self.devices
+
+    def log(self, msg: str):
+        self.Label2.insert(tk.INSERT, "\n" + msg)
+        self.Label2.see(tk.END)
 
     def send_message(self, data: str):
-        ser = serial.Serial(self.ComboboxPorts.get(), baudrate=BAUDRATE, timeout=TIMEOUT_SEC)
-        self.LogMessage.set(ser.name + " data: " + data)
-        ser.write(bytes(f"{data}\r\n", encoding='utf8'))
-        ser.close()
+        if not self.serial.isOpen():
+            self.log("SERIAL PORT UNCONNECTED - CONNECT IT WITH [▶] BUTTON")
+            self.Button21.configure(text='▶')
+            self.scan_ports()
+        else:
+            try:
+                self.log(self.serial.name + " send: " + str(data))
+                self.serial.write(data.encode())
+            except serial.serialutil.SerialException:
+                self.log("SERIAL PORT UNAVAILABLE CHANGE SERIAL OR CHECK CONNECTION")
+                self.scan_ports()
 
     def set_speed(self):
         speed_entry = self.EntrySpeed.get()
