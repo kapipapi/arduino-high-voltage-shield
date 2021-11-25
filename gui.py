@@ -132,6 +132,7 @@ class Toplevel1:
         self.ComboboxDirection = ttk.Combobox(top)
         self.ComboboxDirection.place(relx=0.25, rely=0.5, relheight=0.172, relwidth=0.545)
         self.ComboboxDirection.set('CLOCKWISE')
+        self.ComboboxDirection['state'] = 'readonly'
         self.ComboboxDirection['values'] = ('CLOCKWISE', 'COUNTERCLOCKWISE')
 
         self.ButtonDirectionSet = tk.Button(top, command=self.change_direction)
@@ -158,7 +159,7 @@ class Toplevel1:
 
     def read_serial(self):
         while True:
-            time.sleep(0.1)
+            time.sleep(0.05)
             if self.serial.isOpen():
                 line = self.serial.readline().decode('ascii').strip("\r\n")
                 if line != "":
