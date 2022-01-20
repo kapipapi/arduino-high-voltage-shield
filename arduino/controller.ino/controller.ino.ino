@@ -22,20 +22,21 @@ int pin_output_led_1 = 13;
 int pin_output_led_2 = 12;
 int pin_output_led_3 = 11;
 
+int LED_STATUS = 3; //3-standby, 2-running, 1-error
+
 bool is_safety_stop = false;
+bool manual_steering = false;
 
 //MOTOR UTILITIES
 void set_motor_speed(int speed) {
-  if (!is_safety_stop) {
-    int frequency_hz = speed; //TODO: map speed to frequecy
-    tone(pin_output_motor_speed, frequency_hz);
-  } else {
-    Serial.println("safety switch is on!");
-  }
+  LED_STATUS = 2;
+  int frequency_hz = speed; //TODO: map speed to frequecy
+  tone(pin_output_motor_speed, frequency_hz);
 }
 
 void stop_motor() {
   noTone(pin_output_motor_speed);
+  LED_STATUS = 3;
 }
 
 // MAIN
@@ -47,7 +48,7 @@ void setup() {
 
   pinMode(pin_output_motor_speed,     OUTPUT);
   pinMode(pin_output_motor_direction, OUTPUT);
-  
+
   pinMode(pin_input_buttons_A, INPUT_PULLUP);
   pinMode(pin_input_buttons_B, INPUT_PULLUP);
 
@@ -63,6 +64,28 @@ void setup() {
 }
 
 void loop() {
+  // LED STATUS SET
+  switch (LED_STATUS) {
+    case 1:
+      digitalWrite(pin_output_led_1, HIGH);
+      digitalWrite(pin_output_led_2, LOW);
+      digitalWrite(pin_output_led_3, LOW);
+      break;
+
+    default:
+    case 2:
+      digitalWrite(pin_output_led_1, LOW);
+      digitalWrite(pin_output_led_2, HIGH);
+      digitalWrite(pin_output_led_3, LOW);
+      break;
+
+    case 3:
+      digitalWrite(pin_output_led_1, LOW);
+      digitalWrite(pin_output_led_2, LOW);
+      digitalWrite(pin_output_led_3, HIGH);
+      break;
+  }
+
   // SERIAL CONTROL
   String str;
   while (Serial.available() > 0) {
@@ -91,49 +114,52 @@ void loop() {
     }
   }
 
-  // LIMIT SWITCH CONTROL
-  if (digitalRead(pin_input_buttons_A) == LOW) {
-    stop_motor();
-    if (!is_safety_stop) {
-      Serial.println("STOP! BUTTONS A");
+  // LIMIT SWITCH CONTROL & manual stop
+  if(!manual_steering){
+    if (digitalRead(pin_input_buttons_A) == LOW) {
+      stop_motor();
+      if (!is_safety_stop) {
+        Serial.println("STOP! BUTTONS A");
+      }
+      is_safety_stop = true;
+    } else if (digitalRead(pin_input_buttons_B) == LOW) {
+      stop_motor();
+      if (!is_safety_stop) {
+        Serial.println("STOP! BUTTONS B");
+      }
+      is_safety_stop = true;
+    } else if (digitalRead(pin_input_stop) == LOW) {
+      stop_motor();
+      if (!is_safety_stop) {
+        Serial.println("STOP! Manual button");
+      }
+      is_safety_stop = true;
+    } else {
+      is_safety_stop = false;
     }
-    is_safety_stop = true;
-  } else {
-    is_safety_stop = false;
   }
 
-  if (digitalRead(pin_input_buttons_B) == LOW) {
-    stop_motor();
-    if (!is_safety_stop) {
-      Serial.println("STOP! BUTTONS B");
-    }
-    is_safety_stop = true;
-  } else {
-    is_safety_stop = false;
-  }
-
-  // MANUAL STEERING
-  // stop button
-  if (digitalRead(pin_input_stop) == LOW) {
-    stop_motor();
-    if (!is_safety_stop) {
-      Serial.println("STOP! Manual button");
-    }
-    is_safety_stop = true;
-  } else {
-    is_safety_stop = false;
-  }
-
-  // move right
+  // steeering right left
   if (digitalRead(pin_input_move_right) == LOW) {
-    digitalWrite(pin_output_motor_direction, HIGH); //CW
-    set_motor_speed(manual_motor_spped_hz);
-  }
-
-  // move left
-  if (digitalRead(pin_input_move_left) == LOW) {
-    digitalWrite(pin_output_motor_direction, LOW); //CCW
-    set_motor_speed(manual_motor_spped_hz);
+    if (!manual_steering) {
+      Serial.println("RIGHT");
+      digitalWrite(pin_output_motor_direction, HIGH); //CW
+      set_motor_speed(manual_motor_spped_hz);
+      manual_steering = true;
+    }
+  } else if (digitalRead(pin_input_move_left) == LOW) {
+    if (!manual_steering) {
+      Serial.println("LEFT");
+      digitalWrite(pin_output_motor_direction, LOW); //CCW
+      set_motor_speed(manual_motor_spped_hz);
+      manual_steering = true;
+    }
+  } else {
+    if (manual_steering) {
+      stop_motor();
+      Serial.println("Manual steering stopped");
+      manual_steering = false;
+    }
   }
 
 }
